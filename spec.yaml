@@ -1,0 +1,914 @@
+#file: noinspection YAMLSchemaValidation
+openapi: 3.1.0
+servers:
+  - url: 'https'
+info:
+  title: KiraOuj
+  version: 1.0.0
+  description: An app for renting homes exclusively in Oujda
+tags:
+  - name: listings
+    description: "A listing for rental place"
+  - name: auth
+    description: ""
+paths:
+  /auth/me:
+    get:
+      tags:
+        - auth
+      summary: Return authenticated user's profile
+      security:
+        - BearerJwt: [ ]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: "#/components/schemas/UserSummary"
+                title: ReturnAuthenticatedUsersProfileOk
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+        "401":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+                title: ReturnAuthenticatedUsersProfileUnauthorized
+          description: Authentication is required to access the requested resource. The
+            client must include the appropriate credentials.
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      operationId: returnAuthenticatedUsersProfile
+  /auth/login:
+    post:
+      tags:
+        - auth
+      summary: Login user
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+          description: The request was successful, and the server has returned the
+            requested resource in the response body.
+        "401":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: Invalid credentials were provided
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters: [ ]
+      operationId: loginUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+        required: true
+        description: ""
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: Invalidate refresh token
+      security:
+        - BearerJwt: [ ]
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+          description: Authentication is required to access the requested resource. The
+            client must include the access token in bearer and refresh token in body.
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      operationId: invalidateRefreshToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+        required: true
+        description: ""
+  /auth/refresh:
+    post:
+      tags:
+        - auth
+      summary: Get a new access token using refresh token
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                type: object
+                title: GetANewAccessTokenUsingRefreshTokenCreated
+                required:
+                  - data
+                properties:
+                  data:
+                    type: object
+          description: The request was successful, and a new resource was created.
+        "401":
+          content:
+            application/json:
+              schema:
+                type: object
+                title: GetANewAccessTokenUsingRefreshTokenUnauthorized
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: Invalid or revoked refresh token
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      operationId: getANewAccessTokenUsingRefreshToken
+  /auth/register:
+    post:
+      tags:
+        - auth
+      summary: Create a new user account.
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Token"
+          description: The request was successful, and a new resource was created.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters: [ ]
+      description: Returns a BAD_REQUEST in case of invalid inputs, and CONFLICT if
+        email already exists.
+      operationId: postRegister
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - first_name
+                - last_name
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+                last_name:
+                  type: string
+                first_name:
+                  type: string
+        required: true
+        description: ""
+  /auth/sso/google:
+    post:
+      tags:
+        - auth
+      summary: Login / Create a new account with Google SSO
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                type: object
+                title: LoginCreateANewAccountWithGoogleSsoCreated
+                required:
+                  - created
+                  - token
+                properties:
+                  token:
+                    $ref: "#/components/schemas/Token"
+                  created:
+                    type: boolean
+                    description: Indicates whether the SSO created a new user.
+          description: The request was successful, and a new resource was created.
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                title: LoginCreateANewAccountWithGoogleSsoBadRequest
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: Missing or invalid `token`
+        "403":
+          content:
+            application/json:
+              schema:
+                type: object
+                title: LoginCreateANewAccountWithGoogleSsoForbidden
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+        "500":
+          content:
+            application/json:
+              schema:
+                type: object
+                title: LoginCreateANewAccountWithGoogleSsoInternalServerError
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: The server encountered an unexpected condition that prevented it
+            from fulfilling the request. Report the issue to the support team if
+            it persists.
+      operationId: loginCreateANewAccountWithGoogleSso
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+        required: true
+        description: ""
+  /auth/verify-email:
+    post:
+      tags:
+        - auth
+      summary: Verifies Email
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: Token is missing or expired.
+        "401":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: The token is invalid.
+        "409":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: Account already verified
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      operationId: verifiesEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - verification_token
+              properties:
+                verification_token:
+                  type: string
+        required: true
+        description: ""
+  /auth/reset-password:
+    post:
+      tags:
+        - auth
+      summary: Submit new password with token
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: The server understood the request, but refuses to authorize it.
+            Ensure the client has appropriate permissions.
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      operationId: submitNewPasswordWithToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reset_token
+                - password
+              properties:
+                password:
+                  type: string
+                reset_token:
+                  type: string
+        required: true
+        description: ""
+  /auth/forgot-password:
+    post:
+      tags:
+        - auth
+      summary: Send reset password email
+      responses:
+        "204":
+          $ref: "#/components/responses/NoContent"
+        "403":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: The server understood the request, but refuses to authorize it due
+            to reaching a rate limit.
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      parameters: [ ]
+      description: Sends a reset password link along with a short lived token to the
+        given email. A 204 should be returned whether the email was sent or not
+        for the purpose of avoiding attackers to extract user emails.
+      operationId: sendResetPasswordEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+        required: true
+        description: ""
+  /auth/verify-email/request:
+    post:
+      tags:
+        - auth
+      summary: Resend verification email
+      security:
+        - BearerJwt: [ ]
+      responses:
+        "202":
+          $ref: "#/components/responses/Accepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                properties:
+                  message:
+                    type: string
+          description: Email already verified
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+      operationId: resendVerificationEmail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+        required: true
+        description: ""
+  /listings:
+    get:
+      tags:
+        - listings
+      summary: Pagination of listings
+      parameters:
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [ price_asc,price_desc,rating,newest ]
+            default: newest
+          required: false
+        - in: query
+          name: cursor
+          description: ID of the last item in previous page, used for pagination.
+          schema:
+            type: string
+          required: false
+        - in: query
+          name: query
+          schema:
+            type: string
+          required: false
+          description: Search query to filter through listings by name.
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [ daily, weekly, monthly ]
+            default: monthly
+          required: false
+        - in: query
+          name: from
+          description: From part in date range to filter available listings
+          schema:
+            $ref: "#/components/schemas/DateString"
+          required: true
+        - in: query
+          name: to
+          description: To part in date range to filter available listings
+          schema:
+            $ref: "#/components/schemas/DateString"
+          required: true
+        - in: query
+          name: bbox
+          description: Used for filtering listings in a specific area.
+          schema:
+            type: string
+            description: Represents a rectangular area (bounding box) using two corners
+            examples:
+              - -6.9,34.0,-6.7,34.2
+              - minLng,minLat,maxLng,maxLat
+          required: false
+        - in: query
+          name: price
+          description: Preferred price range.
+          schema:
+            type: string
+            format: min,max
+            examples:
+              220.5,350
+          required: false
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ListingSummary"
+                  cursor:
+                    type: string
+                    description: Cursor being null implies there's no next page
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    post:
+      tags:
+        - listings
+      summary: Upload a listing
+      security:
+        - BearerJwt: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingCreate"
+      responses:
+        "201":
+          description: Listing created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Listing"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Missing bearer JWT token
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: The user is banned from or not authorized to create a listing.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+  /listing/{id}:
+    get:
+      tags:
+        - listings
+      summary: Get a listing item details
+      responses:
+        "200":
+          description: Listing retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Listing"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    put:
+      tags:
+        - listings
+      summary: Update listing details
+      security:
+        - BearerJwt: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingCreate"
+      responses:
+        "201":
+          description: Listing updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+    delete:
+      tags:
+        - listings
+      summary: Delete a listing.
+      security:
+        - BearerJwt: [ ]
+      responses:
+        "204":
+          description: Listing deleted successfully.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/schemas/Error"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+components:
+  schemas:
+    DateTimeString:
+      type: string
+      format: datetime
+      description: ISO 8601 - Datetime.
+      examples:
+        - 2026-05-24T21:22:00Z
+    DateString:
+      type: string
+      format: date
+      description: ISO 8601 - Date only
+      examples:
+        - 2026-05-24
+    Token:
+      type: object
+      required:
+        - access_token
+        - expires_at
+        - refresh_token
+      properties:
+        expires_at:
+          type: string
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+    Location:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude: float
+        longitude: float
+    ImageVariant:
+      type: object
+      required:
+        - width
+        - height
+        - url
+      properties:
+        width:
+          type: integer
+        height:
+          type: integer
+        url:
+          type: string
+    Image:
+      type: object
+      required: [ id,status,url,metadata ]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [ processing, ready ]
+        url:
+          type: string
+          description: Url of the largest resolution image, defaults to the temp uploaded image during processing.
+        metadata:
+          type: object
+          description: Original width and height of the uploaded image.
+          required:
+            - width
+            - height
+          properties:
+            width:
+              type: integer
+            height:
+              type: integer
+        variants:
+          type: object
+          required:
+            - thumbnail
+            - medium
+            - large
+          properties:
+            thumbnail:
+              $ref: "#/components/schemas/ImageVariant"
+            medium:
+              $ref: "#/components/schemas/ImageVariant"
+            large:
+              $ref: "#/components/schemas/ImageVariant"
+    ListingSummary:
+      type: object
+      required: [ id,title,location,description,cover,images,price,rent_type,images_count,created_at ]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        location:
+          $ref: "#/components/schemas/Location"
+        price:
+          type: number
+          format: float
+          description: Price of rent in MAD/Month or MAD/day
+        rent_type:
+          type: string
+          enum: [ daily,weekly,monthly ]
+        cover:
+          $ref: "#/components/schemas/Image"
+        images_count:
+          type: number
+        created_at:
+          $ref: "#/components/schemas/DateTimeString"
+    Listing:
+      type: object
+      required:
+        - id
+        - title
+        - location
+        - description
+        - cover
+        - images
+        - price
+        - rent_type
+        - owner
+        - availability
+        - created_at
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        location:
+          $ref: "#/components/schemas/Location"
+        description:
+          type: object
+          description: A JSON representation of rich text (Using some AST like 'Portable Text'
+        price:
+          type: number
+          format: float
+          description: Price of rent in MAD/Month or MAD/day
+        rent_type:
+          type: string
+          enum: [ daily,weekly,monthly ]
+        cover:
+          $ref: "#/components/schemas/Image"
+        images:
+          type: array
+          items:
+            $ref: "#/components/schemas/Image"
+        owner:
+          $ref: "#/components/schemas/UserSummary"
+        availability:
+          description: A list of time ranges where the listing is/will be occupied
+          type: array
+          items:
+            type: object
+            required: [ start,end ]
+            properties:
+              start:
+                $ref: "#/components/schemas/DateTimeString"
+              end:
+                $ref: "#/components/schemas/DateTimeString"
+        created_at:
+          $ref: "#/components/schemas/DateTimeString"
+    ListingCreate:
+      type: object
+      required: [ title, location, image_ids, description, price, rent_type ]
+      properties:
+        title:
+          type: string
+        location:
+          $ref: "#/components/schemas/Location"
+        image_ids:
+          type: array
+          items:
+            type: string
+          description: "A list of already uploaded image IDs"
+        description:
+          type: object
+          description: A JSON representation of rich text (Using some AST like 'Portable Text'
+        price:
+          type: number
+          format: float
+          description: Price of rent in MAD/Month or MAD/day
+        rent_type:
+          type: string
+          enum: [ monthly,daily,weekly ]
+    UserSummary:
+      type: object
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - created_at
+        - verified
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        verified:
+          type: boolean
+        last_name:
+          type: string
+        avatar_url:
+          type: string
+        created_at:
+          $ref: "#/components/schemas/DateTimeString"
+        first_name:
+          type: string
+      description: A basic representation of a user
+    Error:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+  responses:
+    Accepted:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      description: The request has been accepted for processing, but the processing
+        has not been completed. The request might be processed later.
+    Conflict:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      description: The request could not be completed due to a conflict with the
+        current state of the resource. Resolve the conflict and try again.
+    BadRequest:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      description: The server could not understand the request due to invalid syntax.
+        The client should modify the request and try again.
+    NoContent:
+      description: The request was successful, but there is no content to return in
+        the response.
+    TooManyRequests:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      description: The user has sent too many requests in a given amount of time.
+        Reduce the request rate and try again later.
+    InternalServerError:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      description: The server encountered an unexpected condition that prevented it
+        from fulfilling the request. Report the issue to the support team if it
+        persists.
+    Unauthorized:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+      description: Authentication is required to access the requested resource. The
+        client must have not included the bearer JWT token.
+    Forbidden:
+      description: >
+        The user doesn't have enough permissions to create, update or 
+        delete a resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found or deleted.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+  securitySchemes:
+    BearerJwt:
+      type: http
+      scheme: Bearer
+      bearerFormat: Json Web Token (JWT)
