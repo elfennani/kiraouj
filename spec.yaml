@@ -450,7 +450,7 @@ paths:
     get:
       tags:
         - listings
-      summary: Pagination of listings
+      summary: Pagination of published listings
       parameters:
         - in: query
           name: sort
@@ -583,6 +583,9 @@ paths:
                     $ref: "#/components/schemas/Listing"
         "404":
           $ref: "#/components/responses/NotFound"
+          description: >
+            Resource doesn't exist or not enough permissions to view by
+            being either a drafted or archived by the owner.
         "500":
           $ref: "#/components/responses/InternalServerError"
     put:
@@ -632,6 +635,67 @@ paths:
           $ref: "#/components/schemas/Error"
         "500":
           $ref: "#/components/responses/InternalServerError"
+  /listing/{id}/publish:
+    post:
+      tags:
+        - listings
+      summary: Publish a listing
+      security:
+        BearerJwt: [ ]
+      responses:
+        204:
+          description: Listing published successfully.
+        400:
+          description: Invalid or incomplete information.
+          $ref: "#/components/responses/BadRequest"
+        401:
+          description: User is not logged in aka no bearer token supplied.
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          description: User is not the owner of the listing.
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/schemas/Error"
+        409:
+          description: Listing already published
+          $ref: "#/components/responses/Conflict"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+  /listing/{id}/approve:
+    post:
+      tags:
+        - listings
+      summary: Approve a listing by a moderator/admin
+      security:
+        BearerJwt: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ approved, reason ]
+              properties:
+                approved:
+                  type: boolean
+                reason:
+                  type: string
+      responses:
+        204:
+          description: Listing approved successfully.
+        401:
+          description: User is not logged in aka no bearer token supplied.
+          $ref: "#/components/responses/Unauthorized"
+        403:
+          description: User is not a moderator or admin.
+          $ref: "#/components/responses/Forbidden"
+        404:
+          $ref: "#/components/schemas/Error"
+        409:
+          description: Listing already approved
+          $ref: "#/components/responses/Conflict"
+        500:
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   schemas:
     DateTimeString:
@@ -716,6 +780,9 @@ components:
               $ref: "#/components/schemas/ImageVariant"
             large:
               $ref: "#/components/schemas/ImageVariant"
+    ListingStatus:
+      type: string
+      enum: [ draft,pending_review,published,archived,rejected ]
     ListingSummary:
       type: object
       required: [ id,title,location,description,cover,images,price,rent_type,images_count,created_at ]
@@ -739,6 +806,8 @@ components:
           type: number
         created_at:
           $ref: "#/components/schemas/DateTimeString"
+        status:
+          $ref: "#/components/schemas/ListingStatus"
     Listing:
       type: object
       required:
@@ -749,6 +818,7 @@ components:
         - cover
         - images
         - price
+        - status
         - rent_type
         - owner
         - availability
@@ -763,6 +833,10 @@ components:
         description:
           type: object
           description: A JSON representation of rich text (Using some AST like 'Portable Text'
+        status:
+          $ref: "#/components/schemas/ListingStatus"
+        rejection_reason:
+          type: string
         price:
           type: number
           format: float
