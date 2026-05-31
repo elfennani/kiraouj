@@ -7,9 +7,7 @@ info:
   description: An app for renting homes exclusively in Oujda
 tags:
   - name: listings
-    description: "A listing for rental place"
   - name: auth
-    description: ""
   - name: media
   - name: conversation
 paths:
