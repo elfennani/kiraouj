@@ -1,4 +1,3 @@
-#file: noinspection YAMLSchemaValidation
 openapi: 3.1.0
 servers:
   - url: 'https'
@@ -507,10 +506,11 @@ paths:
             type: string
             format: min,max
             examples:
-              220.5,350
+              - 220.5,350
           required: false
       responses:
         "200":
+          description: Pagination returned successfully
           content:
             application/json:
               schema:
@@ -570,6 +570,12 @@ paths:
       tags:
         - listings
       summary: Get a listing item details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       responses:
         "200":
           description: Listing retrieved successfully
@@ -592,6 +598,12 @@ paths:
       tags:
         - listings
       summary: Update listing details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       security:
         - BearerJwt: [ ]
       requestBody:
@@ -622,6 +634,12 @@ paths:
       tags:
         - listings
       summary: Delete a listing.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
       security:
         - BearerJwt: [ ]
       responses:
@@ -632,70 +650,80 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
         "404":
-          $ref: "#/components/schemas/Error"
+          $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
-  /listing/{id}/publish:
-    post:
+  /listing/{id}/status:
+    get:
       tags:
         - listings
-      summary: Publish a listing
+      summary: Get listing status details.
       security:
-        BearerJwt: [ ]
+        - BearerJwt: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       responses:
-        204:
-          description: Listing published successfully.
-        400:
-          description: Invalid or incomplete information.
-          $ref: "#/components/responses/BadRequest"
-        401:
-          description: User is not logged in aka no bearer token supplied.
+        "200":
+          description: Listing status successfully returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    type: object
+                    required: [ status ]
+                    properties:
+                      status:
+                        $ref: "#/components/schemas/ListingStatus"
+                      rejection_reason:
+                        type: string
+        "401":
           $ref: "#/components/responses/Unauthorized"
-        403:
-          description: User is not the owner of the listing.
+        "403":
           $ref: "#/components/responses/Forbidden"
-        404:
-          $ref: "#/components/schemas/Error"
-        409:
-          description: Listing already published
-          $ref: "#/components/responses/Conflict"
-        500:
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
           $ref: "#/components/responses/InternalServerError"
-  /listing/{id}/approve:
-    post:
+    patch:
       tags:
         - listings
-      summary: Approve a listing by a moderator/admin
+      summary: Update listing status
       security:
-        BearerJwt: [ ]
+        - BearerJwt: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
             schema:
               type: object
-              required: [ approved, reason ]
               properties:
-                approved:
-                  type: boolean
-                reason:
+                status:
+                  $ref: '#/components/schemas/ListingStatus'
+                rejection_reason:
                   type: string
       responses:
-        204:
-          description: Listing approved successfully.
-        401:
-          description: User is not logged in aka no bearer token supplied.
+        "204":
+          description: Listing status successfully updated
+        "401":
           $ref: "#/components/responses/Unauthorized"
-        403:
-          description: User is not a moderator or admin.
+        "403":
           $ref: "#/components/responses/Forbidden"
-        404:
-          $ref: "#/components/schemas/Error"
-        409:
-          description: Listing already approved
-          $ref: "#/components/responses/Conflict"
-        500:
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
           $ref: "#/components/responses/InternalServerError"
-
 components:
   schemas:
     DateTimeString:
@@ -729,8 +757,12 @@ components:
         - latitude
         - longitude
       properties:
-        latitude: float
-        longitude: float
+        latitude:
+          type: number
+          format: float
+        longitude:
+          type: number
+          format: float
     ImageVariant:
       type: object
       required:
@@ -835,8 +867,6 @@ components:
           description: A JSON representation of rich text (Using some AST like 'Portable Text'
         status:
           $ref: "#/components/schemas/ListingStatus"
-        rejection_reason:
-          type: string
         price:
           type: number
           format: float
