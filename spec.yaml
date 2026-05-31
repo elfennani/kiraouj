@@ -630,6 +630,42 @@ paths:
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalServerError"
+    patch:
+      tags:
+        - listings
+      summary: Partially update listing details
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      security:
+        - BearerJwt: [ ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingPartialUpdate"
+      responses:
+        "200":
+          description: Listing updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ data ]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Listing"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
     delete:
       tags:
         - listings
@@ -898,6 +934,30 @@ components:
     ListingCreate:
       type: object
       required: [ title, location, image_ids, description, price, rent_type ]
+      properties:
+        title:
+          type: string
+        location:
+          $ref: "#/components/schemas/Location"
+        image_ids:
+          type: array
+          items:
+            type: string
+          description: "A list of already uploaded image IDs"
+        description:
+          type: object
+          description: A JSON representation of rich text (Using some AST like 'Portable Text'
+        price:
+          type: number
+          format: float
+          description: Price of rent in MAD/Month or MAD/day
+        rent_type:
+          type: string
+          enum: [ monthly,daily,weekly ]
+        status:
+          $ref: "#/components/schemas/ListingStatus"
+    ListingPartialUpdate:
+      type: object
       properties:
         title:
           type: string
